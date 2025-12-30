@@ -77,7 +77,6 @@ class TaskManager:
         completed_tasks = sum(1 for t in self.tasks.values() if t.completed)
         pending_tasks = total_tasks - completed_tasks
 
-        # Calcular expiradas
         now = datetime.now()
         expired_tasks = sum(
             1

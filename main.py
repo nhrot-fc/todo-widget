@@ -29,9 +29,5 @@ if __name__ == "__main__":
             except KeyboardInterrupt:
                 logger.info("Application stopped by user")
     else:
-        # Imprimir estadísticas usando el método centralizado
         stats = manager.get_stats()
-        print(f"Total Tasks: {stats['total']}")
-        print(f"Completed:   {stats['completed']}")
-        print(f"Pending:     {stats['pending']}")
-        print(f"Expired:     {stats['expired']}")
+        print(stats)
