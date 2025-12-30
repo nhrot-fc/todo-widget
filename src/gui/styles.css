@@ -1,0 +1,112 @@
+/* Tokyo Night Variables */
+:root {
+    --bg-color: rgba(36, 40, 59, 0.85); /* Un poco de opacidad */
+    --input-bg: rgba(26, 27, 38, 0.5);
+    --text-color: #c0caf5;
+    --accent-color: #7aa2f7;  /* Azul */
+    --success-color: #9ece6a; /* Verde */
+    --danger-color: #f7768e;  /* Rojo */
+    --border-dim: rgba(169, 177, 214, 0.1);
+    --border-active: rgba(122, 162, 247, 0.5);
+}
+
+/* Reset general */
+window {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: "JetBrainsMono Nerd Font", "FiraCode Nerd Font", monospace;
+    font-size: 14px;
+}
+
+/* El contenedor de la lista */
+listbox {
+    background-color: transparent;
+    border-top: 1px solid var(--border-dim);
+    margin-top: 10px;
+}
+
+/* --- FILAS DE TAREAS (Minimal Outlined) --- */
+.task-row {
+    background-color: transparent;
+    border-bottom: 1px solid var(--border-dim);
+    padding: 8px 12px;
+    transition: all 0.2s ease;
+}
+
+.task-row:hover {
+    background-color: rgba(255, 255, 255, 0.03);
+}
+
+.task-label {
+    margin-right: 10px;
+    font-weight: 500;
+}
+
+.task-label.completed {
+    color: #565f89;
+    text-decoration: line-through;
+}
+
+/* --- INPUT TEXT --- */
+entry {
+    background-color: var(--input-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-dim);
+    border-radius: 4px;
+    padding: 8px;
+    margin: 10px 10px 0 10px;
+    box-shadow: none;
+    transition: border-color 0.2s;
+}
+
+entry:focus {
+    border-color: var(--accent-color);
+    outline: none;
+}
+
+/* --- BOTONES (Iconos only) --- */
+button {
+    background-color: transparent;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: var(--text-color);
+    padding: 4px 8px;
+    margin-left: 4px;
+    box-shadow: none;
+}
+
+button:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-color: var(--border-dim);
+}
+
+/* Botón de Agregar (Principal) */
+button.suggested-action {
+    color: var(--accent-color);
+    border: 1px solid var(--border-dim);
+}
+button.suggested-action:hover {
+    border-color: var(--accent-color);
+    background-color: rgba(122, 162, 247, 0.1);
+}
+
+/* Botón Check (Customizado como outline) */
+button.check-btn {
+    color: #565f89; /* Gris cuando pendiente */
+    font-size: 16px;
+}
+button.check-btn:hover {
+    color: var(--success-color);
+}
+button.check-btn.checked {
+    color: var(--success-color);
+}
+
+/* Botón Borrar */
+button.delete-btn {
+    color: #565f89;
+}
+button.delete-btn:hover {
+    color: var(--danger-color);
+    background-color: rgba(247, 118, 142, 0.1);
+}

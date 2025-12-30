@@ -7,13 +7,9 @@ class Config(BaseSettings):
     storage_path: str = "tasks.json"
 
     # Logging
-    log_level: str = "INFO"
+    log_level: str = "DEBUG"
     log_file: str | None = None
 
-    # UI / Styling
-    opacity: float = 1.0
-    transparent_background: bool = True
-    decorated: bool = True
 
 
 settings = Config()

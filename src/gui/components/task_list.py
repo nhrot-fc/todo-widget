@@ -14,27 +14,65 @@ class TaskRow(Gtk.ListBoxRow):
     def __init__(self, task_id: int, task):
         super().__init__()
         self.task_id = task_id
+        # set a name for CSS selection
+        try:
+            self.set_name("task-row")
+        except Exception:
+            pass
+
         hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         self.set_child(hbox)
 
         title = getattr(task, "title", str(task))
         self.title_label = Gtk.Label(label=title)
+        try:
+            self.title_label.set_name("title-label")
+        except Exception:
+            pass
         self.title_label.set_hexpand(True)
         hbox.append(self.title_label)
 
-        completed = bool(getattr(task, "completed", False))
-        self.toggle_btn = Gtk.CheckButton(active=completed)
-        self.toggle_btn.connect("toggled", self.on_toggled)
-        hbox.append(self.toggle_btn)
+        # Controls on the right: completion toggle and remove (X)
+        controls = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        try:
+            controls.set_name("controls")
+        except Exception:
+            pass
 
-        remove_btn = Gtk.Button(label="Remove")
+        completed = bool(getattr(task, "completed", False))
+        # use a small toggle button with an icon-like label (minimal text)
+        self.toggle_btn = Gtk.ToggleButton(label="✔" if completed else " ")
+        try:
+            self.toggle_btn.set_name("toggle-btn")
+        except Exception:
+            pass
+        self.toggle_btn.set_active(completed)
+        self.toggle_btn.connect("toggled", self.on_toggled)
+        controls.append(self.toggle_btn)
+
+        # Remove button as a small 'X' icon (nerdfont/ASCII compatible)
+        remove_btn = Gtk.Button(label="✕")
+        try:
+            remove_btn.set_name("remove-btn")
+        except Exception:
+            pass
         remove_btn.connect("clicked", self.on_remove)
-        hbox.append(remove_btn)
+        controls.append(remove_btn)
+
+        hbox.append(controls)
 
     def on_toggled(self, widget):
         try:
             manager.toggle_task_completion(self.task_id)
             logger.info("Toggled task %s", self.task_id)
+            # reflect completed state in UI via CSS class
+            try:
+                if widget.get_active():
+                    self.add_css_class("completed")
+                else:
+                    self.remove_css_class("completed")
+            except Exception:
+                pass
         except Exception as e:
             logger.exception("Failed toggling task %s: %s", self.task_id, e)
 
@@ -44,6 +82,11 @@ class TaskRow(Gtk.ListBoxRow):
             parent = self.get_parent()
             if parent:
                 parent.remove(self)
+            # save after removal
+            try:
+                manager.save_tasks()
+            except Exception:
+                logger.debug("Failed saving after remove")
             logger.info("Removed task %s", self.task_id)
         except Exception as e:
             logger.exception("Failed removing task %s: %s", self.task_id, e)
@@ -65,12 +108,6 @@ class TaskList(Gtk.Box):
 
         self.listbox = Gtk.ListBox()
         self.append(self.listbox)
-
-        # Load persisted tasks (if any) then populate the UI
-        try:
-            manager.load_tasks()
-        except Exception:
-            logger.debug("No tasks loaded or failed to load")
 
         self.refresh()
 
@@ -100,6 +137,11 @@ class TaskList(Gtk.Box):
             row = TaskRow(new_id, task)
             self.listbox.append(row)
             self.entry.set_text("")
+            # save after adding
+            try:
+                manager.save_tasks()
+            except Exception:
+                logger.debug("Failed saving after add")
             logger.info("Added task %s", title)
         except Exception as e:
             logger.exception("Failed adding task: %s", e)
