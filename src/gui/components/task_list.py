@@ -1,62 +1,43 @@
 import gi
-
+from datetime import datetime
 from src.managers.task_manager import manager
 from src.core.logging import get_logger
 from src.schemas.task import Task
-from datetime import datetime
 
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gtk, Gdk  # type: ignore # noqa: E402, E501
+from gi.repository import Gtk, Gdk  # type: ignore
 
 logger = get_logger(__name__)
 
 
 class TaskRow(Gtk.ListBoxRow):
-    def __init__(self, task_id, task_data: Task):
+    def __init__(self, task_id: int, task_data: Task):
         super().__init__()
         self.task_id = task_id
         self.add_css_class("task-row")
 
-        # Layout horizontal
-        hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-        self.set_child(hbox)
-        self.hbox = hbox
+        # Contenedor principal
+        self.hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        self.set_child(self.hbox)
 
         # 1. Label
         self.label = Gtk.Label(label=task_data.title, xalign=0)
         self.label.add_css_class("task-label")
         self.label.set_hexpand(True)
-
-        if task_data.completed:
-            self.label.add_css_class("completed")
-            # also mark date button as completed (show strikethrough)
-            try:
-                self.date_btn.add_css_class("completed")
-            except Exception:
-                pass
-
-        hbox.append(self.label)
+        self.hbox.append(self.label)
 
         # 2. Controles
-        controls_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
-        self.controls_box = controls_box
+        self.controls_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
 
-        # Botón Fecha (izquierda del check)
-        date_label = (
-            task_data.due_date.strftime("%Y-%m-%d") if task_data.due_date else ""
-        )
-        self.date_btn = Gtk.Button(label=date_label)
+        # Botón Fecha
+        self.date_btn = Gtk.Button()
         self.date_btn.add_css_class("date-btn")
         self.date_btn.set_has_frame(False)
         self.date_btn.connect("clicked", self.on_set_date)
 
-        # Botón Check (a la derecha de la fecha)
-        is_done = task_data.completed
-        icon_check = "" if is_done else ""
-        self.check_btn = Gtk.Button(label=icon_check)
+        # Botón Check
+        self.check_btn = Gtk.Button()
         self.check_btn.add_css_class("check-btn")
-        if is_done:
-            self.check_btn.add_css_class("checked")
         self.check_btn.set_has_frame(False)
         self.check_btn.connect("clicked", self.on_toggle)
 
@@ -66,165 +47,137 @@ class TaskRow(Gtk.ListBoxRow):
         del_btn.set_has_frame(False)
         del_btn.connect("clicked", self.on_delete)
 
-        controls_box.append(self.date_btn)
-        controls_box.append(self.check_btn)
-        controls_box.append(del_btn)
-        hbox.append(controls_box)
+        self.controls_box.append(self.date_btn)
+        self.controls_box.append(self.check_btn)
+        self.controls_box.append(del_btn)
+        self.hbox.append(self.controls_box)
 
-        # Enable double-click to edit title (in-place)
+        # Doble clic para editar
         click = Gtk.GestureClick()
         click.connect("pressed", self.on_label_pressed)
         self.label.add_controller(click)
-        self.update_expired_state()
 
-    def on_toggle(self, widget):
-        new_state = manager.toggle_task(self.task_id)
-        if new_state:
+        # Estado inicial
+        self.update_ui_state(task_data)
+
+    def update_ui_state(self, task: Task | None = None):
+        """Actualiza todos los estilos visuales (completado, expirado, fecha)."""
+        if task is None:
+            task = manager.get_tasks().get(self.task_id)
+
+        if not task:
+            return
+
+        # 1. Estado Completado
+        if task.completed:
             self.label.add_css_class("completed")
+            self.date_btn.add_css_class("completed")
             self.check_btn.add_css_class("checked")
             self.check_btn.set_label("")
-            try:
-                self.date_btn.add_css_class("completed")
-            except Exception:
-                pass
         else:
             self.label.remove_css_class("completed")
+            self.date_btn.remove_css_class("completed")
             self.check_btn.remove_css_class("checked")
             self.check_btn.set_label("")
-            try:
-                self.date_btn.remove_css_class("completed")
-            except Exception:
-                pass
-        try:
-            manager.save_tasks()
-        except Exception as e:
-            logger.error(f"Error saving tasks: {e}")
-        # Recompute expired styling when completion changes
-        self.update_expired_state()
+
+        # 2. Fecha
+        date_label = task.due_date.strftime("%Y-%m-%d") if task.due_date else ""
+        self.date_btn.set_label(date_label)
+
+        # 3. Estado Expirado
+        is_expired = False
+        if task.due_date and not task.completed:
+            if task.due_date < datetime.now():
+                is_expired = True
+
+        if is_expired:
+            self.add_css_class("expired")
+        else:
+            self.remove_css_class("expired")
+
+    def on_toggle(self, widget):
+        manager.toggle_task(self.task_id)
+        self.update_ui_state()
+        manager.save_tasks()
 
     def on_delete(self, widget):
         manager.remove_task(self.task_id)
-        listbox = self.get_parent()
-        listbox.remove(self)
-        try:
-            manager.save_tasks()
-        except Exception as e:
-            logger.error(f"Error saving tasks: {e}")
+        # Eliminarse del padre (ListBox)
+        parent = self.get_parent()
+        if parent:
+            parent.remove(self)
+        manager.save_tasks()
 
     def on_label_pressed(self, gesture, n_press, x, y):
-        if n_press == 2:
+        if n_press == 2:  # Doble clic
             self.start_edit()
 
     def start_edit(self):
-        # Replace label with Entry for in-place edit
-        try:
-            self.hbox.remove(self.label)
-        except Exception:
-            pass
+        self.hbox.remove(self.label)
+
         self.edit_entry = Gtk.Entry()
         self.edit_entry.set_text(self.label.get_text())
         self.edit_entry.set_hexpand(True)
         self.edit_entry.connect("activate", self.finish_edit)
-        # Use EventControllerFocus to detect leaving the entry (GTK4)
-        try:
-            focus_ctl = Gtk.EventControllerFocus()
-            focus_ctl.connect("leave", lambda ctl: self.finish_edit(self.edit_entry))
-            self.edit_entry.add_controller(focus_ctl)
-        except Exception:
-            pass
+
+        # Detectar pérdida de foco para guardar también
+        focus_ctl = Gtk.EventControllerFocus()
+        focus_ctl.connect("leave", lambda ctl: self.finish_edit(self.edit_entry))
+        self.edit_entry.add_controller(focus_ctl)
+
         self.hbox.insert_child_before(self.edit_entry, self.controls_box)
         self.edit_entry.grab_focus()
 
     def finish_edit(self, widget, *args):
-        # widget may be Entry or event args; read text from entry
         try:
             new_text = self.edit_entry.get_text().strip()
         except Exception:
+            # Si el widget ya fue destruido
             return
-        if new_text and len(new_text) > 0 and new_text != self.label.get_text():
+
+        if new_text and new_text != self.label.get_text():
             manager.edit_task_title(self.task_id, new_text)
-            try:
-                manager.save_tasks()
-            except Exception as e:
-                logger.error(f"Error saving tasks: {e}")
-        # restore label
-        try:
-            self.hbox.remove(self.edit_entry)
-        except Exception:
-            pass
-        self.label.set_text(new_text or self.label.get_text())
+            manager.save_tasks()
+            self.label.set_text(new_text)
+
+        # Restaurar UI
+        self.hbox.remove(self.edit_entry)
         self.hbox.insert_child_before(self.label, self.controls_box)
-        self.update_expired_state()
 
     def on_set_date(self, widget):
-        # Open a simple dialog with Gtk.Calendar to pick a date
-        try:
-            dialog = Gtk.Dialog(title="Select date")
-            dialog.add_buttons(
-                "Cancel", Gtk.ResponseType.CANCEL, "OK", Gtk.ResponseType.OK
-            )
-            # Try to set transient parent (avoid mapping warning)
-            try:
-                parent = self.get_ancestor(Gtk.Window)
-                if parent:
-                    dialog.set_transient_for(parent)
-            except Exception:
-                pass
+        dialog = Gtk.Dialog(title="Select date")
+        dialog.add_buttons("Cancel", Gtk.ResponseType.CANCEL, "OK", Gtk.ResponseType.OK)
 
-            content = dialog.get_content_area()
-            cal = Gtk.Calendar()
-            content.append(cal)
+        root = self.get_root()
+        if isinstance(root, Gtk.Window):
+            dialog.set_transient_for(root)
 
-            def _on_response(dlg, response_id):
-                if response_id == Gtk.ResponseType.OK:
-                    datetime_obj = cal.get_date()
-                    year, month, day = (
-                        datetime_obj.get_year(),
-                        datetime_obj.get_month(),
-                        datetime_obj.get_day_of_month(),
-                    )
-                    new_due = datetime(year, month, day)
-                    manager.edit_task_due_date(self.task_id, new_due)
-                    try:
-                        manager.save_tasks()
-                    except Exception as e:
-                        logger.error(f"Error saving tasks: {e}")
-                    self.date_btn.set_label(new_due.strftime("%Y-%m-%d"))
-                dlg.destroy()
+        content = dialog.get_content_area()
+        cal = Gtk.Calendar()
+        content.append(cal)
 
-            dialog.connect("response", _on_response)
-            dialog.present()
-        except Exception as e:
-            logger.exception("Failed to set date: %s", e)
+        def _on_response(dlg, response_id):
+            if response_id == Gtk.ResponseType.OK:
+                # Gtk4 Calendar get_date retorna un GLib.DateTime
+                g_date = cal.get_date()
+                new_due = datetime(
+                    g_date.get_year(), g_date.get_month(), g_date.get_day_of_month()
+                )
 
-        self.update_expired_state()
+                manager.edit_task_due_date(self.task_id, new_due)
+                manager.save_tasks()
+                self.update_ui_state()
+            dlg.destroy()
 
-    def update_expired_state(self):
-        try:
-            task = manager.get_tasks().get(self.task_id)
-            expired = False
-            if task and task.due_date and not task.completed:
-                if task.due_date < datetime.now():
-                    expired = True
-            if expired:
-                try:
-                    self.add_css_class("expired")
-                except Exception:
-                    pass
-            else:
-                try:
-                    self.remove_css_class("expired")
-                except Exception:
-                    pass
-        except Exception:
-            logger.exception("Failed to update expired state for task %s", self.task_id)
+        dialog.connect("response", _on_response)
+        dialog.present()
 
 
 class TaskList(Gtk.Box):
     def __init__(self):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=0)
 
-        # --- Header con Input ---
+        # Header
         input_container = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         input_container.add_css_class("input-container")
 
@@ -233,7 +186,6 @@ class TaskList(Gtk.Box):
         self.entry.set_hexpand(True)
         self.entry.connect("activate", self.on_add)
 
-        # Botón '+' Minimalista
         add_btn = Gtk.Button(label="")
         add_btn.add_css_class("suggested-action")
         add_btn.connect("clicked", self.on_add)
@@ -242,15 +194,11 @@ class TaskList(Gtk.Box):
         input_container.append(add_btn)
         self.append(input_container)
 
-        # --- Lista de Tareas ---
-        # ScrolledWindow permite scroll si hay muchas tareas
+        # List
         scrolled = Gtk.ScrolledWindow()
-        scrolled.set_vexpand(True)  # Ocupar resto de altura
-
+        scrolled.set_vexpand(True)
         self.listbox = Gtk.ListBox()
-        self.listbox.set_selection_mode(
-            Gtk.SelectionMode.NONE
-        )  # Desactivar selección azul fea
+        self.listbox.set_selection_mode(Gtk.SelectionMode.NONE)
         self.listbox.add_css_class("task-list")
 
         scrolled.set_child(self.listbox)
@@ -259,13 +207,18 @@ class TaskList(Gtk.Box):
         self.refresh_list()
 
     def refresh_list(self):
-        child = self.listbox.get_first_child()
-        while child:
-            self.listbox.remove(child)
+        while True:
             child = self.listbox.get_first_child()
+            if not child:
+                break
+            self.listbox.remove(child)
 
         tasks = manager.get_tasks()
-        for t_id, t_data in tasks.items():
+        sorted_tasks = sorted(
+            tasks.items(), key=lambda x: (x[1].completed, x[1].due_date or datetime.max)
+        )
+
+        for t_id, t_data in sorted_tasks:
             row = TaskRow(t_id, t_data)
             self.listbox.append(row)
 
@@ -273,10 +226,8 @@ class TaskList(Gtk.Box):
         text = self.entry.get_text().strip()
         if text:
             new_id, new_task = manager.add_task(text)
+            manager.save_tasks()
+
             row = TaskRow(new_id, new_task)
             self.listbox.append(row)
             self.entry.set_text("")
-        try:
-            manager.save_tasks()
-        except Exception as e:
-            logger.error(f"Error saving tasks: {e}")

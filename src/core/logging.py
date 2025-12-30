@@ -5,16 +5,15 @@ from datetime import datetime
 
 class SimpleFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
+        exc = ""
         if record.exc_info:
             exc = "\n" + self.formatException(record.exc_info)
-        else:
-            exc = ""
+
         ts = datetime.fromtimestamp(record.created).strftime("%Y-%m-%d %H:%M:%S")
-        level = record.levelname
-        func = record.funcName
-        line = record.lineno
-        message = record.getMessage()
-        return f"[{level}] [{ts}] [{func}: at line: {line}] {message}{exc}"
+        return (
+            f"[{record.levelname}] [{ts}] "
+            f"[{record.funcName}:{record.lineno}] {record.getMessage()}{exc}"
+        )
 
 
 def setup_logging(level: str = "INFO", log_file: str | None = None) -> None:
@@ -25,14 +24,19 @@ def setup_logging(level: str = "INFO", log_file: str | None = None) -> None:
 
     formatter = SimpleFormatter()
 
+    # Console Handler
     sh = logging.StreamHandler(sys.stderr)
     sh.setFormatter(formatter)
     root.addHandler(sh)
 
+    # File Handler
     if log_file:
-        fh = logging.FileHandler(log_file, encoding="utf-8")
-        fh.setFormatter(formatter)
-        root.addHandler(fh)
+        try:
+            fh = logging.FileHandler(log_file, encoding="utf-8")
+            fh.setFormatter(formatter)
+            root.addHandler(fh)
+        except Exception as e:
+            sys.stderr.write(f"Failed to setup log file handler: {e}\n")
 
 
 def get_logger(name: str) -> logging.Logger:
