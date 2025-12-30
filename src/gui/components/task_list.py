@@ -113,7 +113,8 @@ class TaskRow(Gtk.ListBoxRow):
             self.start_edit()
 
     def start_edit(self):
-        self.hbox.remove(self.label)
+        # Ocultar la etiqueta pero mantenerla en el contenedor
+        self.label.set_visible(False)
 
         self.edit_entry = Gtk.Entry()
         self.edit_entry.set_text(self.label.get_text())
@@ -125,7 +126,8 @@ class TaskRow(Gtk.ListBoxRow):
         focus_ctl.connect("leave", lambda ctl: self.finish_edit(self.edit_entry))
         self.edit_entry.add_controller(focus_ctl)
 
-        self.hbox.insert_child_before(self.edit_entry, self.controls_box)
+        # Insertar la entrada después de la etiqueta (API de Gtk.Box)
+        self.hbox.insert_child_after(self.edit_entry, self.label)
         self.edit_entry.grab_focus()
 
     def finish_edit(self, widget, *args):
@@ -140,9 +142,8 @@ class TaskRow(Gtk.ListBoxRow):
             manager.save_tasks()
             self.label.set_text(new_text)
 
-        # Restaurar UI
         self.hbox.remove(self.edit_entry)
-        self.hbox.insert_child_before(self.label, self.controls_box)
+        self.label.set_visible(True)
 
     def on_set_date(self, widget):
         dialog = Gtk.Dialog(title="Select date")
