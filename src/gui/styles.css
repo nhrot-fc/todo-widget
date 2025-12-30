@@ -20,10 +20,8 @@ window {
 
 /* Contenedor del Input (Arriba) */
 .input-container {
-    padding: 15px;
+    padding: 10px;
     border-bottom: 1px solid var(--border-color);
-    background-color: rgba(26, 27, 38, 0.35);
-    border-radius: 8px;
 }
 
 /* El input de texto */
@@ -43,6 +41,8 @@ entry:focus {
 
 /* Botón de Agregar (+) */
 button.suggested-action {
+    font-size: 16px;
+    font-weight: bold;
     background: transparent;
     color: var(--accent-color);
     border: 1px solid var(--border-color);

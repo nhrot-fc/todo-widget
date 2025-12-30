@@ -82,6 +82,17 @@ def on_activate(app):
     logger.info("Presenting window")
     win.present()
 
+    controller = Gtk.EventControllerKey()
+
+    def _on_key_pressed(controller, keyval, keycode, state):
+        if keyval == Gdk.KEY_Escape:
+            app.quit()
+            return True
+        return False
+
+    controller.connect("key-pressed", _on_key_pressed)
+    win.add_controller(controller)
+
 
 def main():
     logger.info("Starting application run")

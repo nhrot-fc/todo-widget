@@ -65,7 +65,6 @@ class TaskManager:
             for id, task_data in data.items():
                 task_id = int(id)
                 self.tasks[task_id] = Task.model_validate(task_data)
-        logger.info(f"Loaded {len(self.tasks)} tasks from {self.file_path}")
 
 
 manager = TaskManager()
