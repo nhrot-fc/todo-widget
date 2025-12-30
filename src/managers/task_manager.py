@@ -14,13 +14,16 @@ class TaskManager:
     def __init__(self):
         self.tasks: dict[int, Task] = {}
         self.file_path = Path(settings.storage_path)
+        self.load_tasks()
 
     def _next_id(self) -> int:
         if not self.tasks:
             return 1
         return max(self.tasks.keys()) + 1
 
-    def add_task(self, title: str, due_date: datetime | None = None) -> tuple[int, Task]:
+    def add_task(
+        self, title: str, due_date: datetime | None = None
+    ) -> tuple[int, Task]:
         task_id = self._next_id()
         task = Task(title=title, due_date=due_date)
         self.tasks[task_id] = task
@@ -48,7 +51,7 @@ class TaskManager:
         return self.tasks
 
     def save_tasks(self) -> None:
-        data = {task_id: task.model_dump_json() for task_id, task in self.tasks.items()}
+        data = {str(id): task.model_dump() for id, task in self.tasks.items()}
         with open(self.file_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, default=str)
         logger.info(f"Saved {len(self.tasks)} tasks to {self.file_path}")
@@ -61,7 +64,7 @@ class TaskManager:
             data = json.load(f)
             for id, task_data in data.items():
                 task_id = int(id)
-                self.tasks[task_id] = Task.model_validate_json(task_data)
+                self.tasks[task_id] = Task.model_validate(task_data)
         logger.info(f"Loaded {len(self.tasks)} tasks from {self.file_path}")
 
 

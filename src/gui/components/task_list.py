@@ -2,6 +2,7 @@ import gi
 
 from src.managers.task_manager import manager
 from src.core.logging import get_logger
+from src.schemas.task import Task
 
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk, Gdk  # type: ignore # noqa: E402
@@ -10,7 +11,7 @@ logger = get_logger(__name__)
 
 
 class TaskRow(Gtk.ListBoxRow):
-    def __init__(self, task_id, task_data):
+    def __init__(self, task_id, task_data: Task):
         super().__init__()
         self.task_id = task_id
         self.add_css_class("task-row")
@@ -20,11 +21,11 @@ class TaskRow(Gtk.ListBoxRow):
         self.set_child(hbox)
 
         # 1. Label
-        self.label = Gtk.Label(label=task_data["title"], xalign=0)
+        self.label = Gtk.Label(label=task_data.title, xalign=0)
         self.label.add_css_class("task-label")
         self.label.set_hexpand(True)
 
-        if task_data["completed"]:
+        if task_data.completed:
             self.label.add_css_class("completed")
 
         hbox.append(self.label)
@@ -33,7 +34,7 @@ class TaskRow(Gtk.ListBoxRow):
         controls_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
 
         # Botón Check
-        is_done = task_data["completed"]
+        is_done = task_data.completed
         icon_check = "" if is_done else ""
         self.check_btn = Gtk.Button(label=icon_check)
         self.check_btn.add_css_class("check-btn")
@@ -62,11 +63,19 @@ class TaskRow(Gtk.ListBoxRow):
             self.label.remove_css_class("completed")
             self.check_btn.remove_css_class("checked")
             self.check_btn.set_label("")
+        try:
+            manager.save_tasks()
+        except Exception as e:
+            logger.error(f"Error saving tasks: {e}")
 
     def on_delete(self, widget):
         manager.remove_task(self.task_id)
         listbox = self.get_parent()
         listbox.remove(self)
+        try:
+            manager.save_tasks()
+        except Exception as e:
+            logger.error(f"Error saving tasks: {e}")
 
 
 class TaskList(Gtk.Box):
@@ -122,7 +131,7 @@ class TaskList(Gtk.Box):
         text = self.entry.get_text().strip()
         if text:
             new_id, new_task = manager.add_task(text)
-            row = TaskRow(new_id, new_task.model_dump())
+            row = TaskRow(new_id, new_task)
             self.listbox.append(row)
             self.entry.set_text("")
         try:
