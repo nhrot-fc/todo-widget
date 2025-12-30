@@ -1,6 +1,5 @@
 from datetime import datetime
 import json
-import os
 from pathlib import Path
 
 from src.schemas.task import Task
@@ -64,3 +63,6 @@ class TaskManager:
                 task_id = int(id)
                 self.tasks[task_id] = Task.model_validate_json(task_data)
         logger.info(f"Loaded {len(self.tasks)} tasks from {self.file_path}")
+
+
+manager = TaskManager()

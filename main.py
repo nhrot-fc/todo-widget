@@ -1,5 +1,4 @@
-def main():
-    print("Hello from todo-widget!")
+from src.gui.TodoApp import main
 
 
 if __name__ == "__main__":
