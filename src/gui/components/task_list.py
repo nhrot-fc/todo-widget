@@ -29,6 +29,11 @@ class TaskRow(Gtk.ListBoxRow):
 
         if task_data.completed:
             self.label.add_css_class("completed")
+            # also mark date button as completed (show strikethrough)
+            try:
+                self.date_btn.add_css_class("completed")
+            except Exception:
+                pass
 
         hbox.append(self.label)
 
@@ -36,7 +41,7 @@ class TaskRow(Gtk.ListBoxRow):
         controls_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
         self.controls_box = controls_box
 
-        # Botón Fecha
+        # Botón Fecha (izquierda del check)
         date_label = (
             task_data.due_date.strftime("%Y-%m-%d") if task_data.due_date else ""
         )
@@ -45,7 +50,7 @@ class TaskRow(Gtk.ListBoxRow):
         self.date_btn.set_has_frame(False)
         self.date_btn.connect("clicked", self.on_set_date)
 
-        # Botón Check
+        # Botón Check (a la derecha de la fecha)
         is_done = task_data.completed
         icon_check = "" if is_done else ""
         self.check_btn = Gtk.Button(label=icon_check)
@@ -61,8 +66,8 @@ class TaskRow(Gtk.ListBoxRow):
         del_btn.set_has_frame(False)
         del_btn.connect("clicked", self.on_delete)
 
-        controls_box.append(self.check_btn)
         controls_box.append(self.date_btn)
+        controls_box.append(self.check_btn)
         controls_box.append(del_btn)
         hbox.append(controls_box)
 
@@ -70,6 +75,7 @@ class TaskRow(Gtk.ListBoxRow):
         click = Gtk.GestureClick()
         click.connect("pressed", self.on_label_pressed)
         self.label.add_controller(click)
+        self.update_expired_state()
 
     def on_toggle(self, widget):
         new_state = manager.toggle_task(self.task_id)
@@ -77,14 +83,24 @@ class TaskRow(Gtk.ListBoxRow):
             self.label.add_css_class("completed")
             self.check_btn.add_css_class("checked")
             self.check_btn.set_label("")
+            try:
+                self.date_btn.add_css_class("completed")
+            except Exception:
+                pass
         else:
             self.label.remove_css_class("completed")
             self.check_btn.remove_css_class("checked")
             self.check_btn.set_label("")
+            try:
+                self.date_btn.remove_css_class("completed")
+            except Exception:
+                pass
         try:
             manager.save_tasks()
         except Exception as e:
             logger.error(f"Error saving tasks: {e}")
+        # Recompute expired styling when completion changes
+        self.update_expired_state()
 
     def on_delete(self, widget):
         manager.remove_task(self.task_id)
@@ -138,6 +154,7 @@ class TaskRow(Gtk.ListBoxRow):
             pass
         self.label.set_text(new_text or self.label.get_text())
         self.hbox.insert_child_before(self.label, self.controls_box)
+        self.update_expired_state()
 
     def on_set_date(self, widget):
         # Open a simple dialog with Gtk.Calendar to pick a date
@@ -179,6 +196,28 @@ class TaskRow(Gtk.ListBoxRow):
             dialog.present()
         except Exception as e:
             logger.exception("Failed to set date: %s", e)
+
+        self.update_expired_state()
+
+    def update_expired_state(self):
+        try:
+            task = manager.get_tasks().get(self.task_id)
+            expired = False
+            if task and task.due_date and not task.completed:
+                if task.due_date < datetime.now():
+                    expired = True
+            if expired:
+                try:
+                    self.add_css_class("expired")
+                except Exception:
+                    pass
+            else:
+                try:
+                    self.remove_css_class("expired")
+                except Exception:
+                    pass
+        except Exception:
+            logger.exception("Failed to update expired state for task %s", self.task_id)
 
 
 class TaskList(Gtk.Box):

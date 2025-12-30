@@ -7,6 +7,7 @@
     --accent-color: #7aa2f7;
     --success-color: #9ece6a;
     --danger-color: #f7768e;
+    --expired-color: #ffb86c;
     --border-color: rgba(169, 177, 214, 0.1);
 }
 
@@ -84,6 +85,12 @@ button.suggested-action:hover {
     text-decoration: line-through;
 }
 
+/* Completed date button: muted + line-through */
+button.date-btn.completed {
+    color: var(--muted-color);
+    text-decoration: line-through;
+}
+
 /* Botones de acción en la fila */
 button.check-btn,
 button.delete-btn {
@@ -114,4 +121,10 @@ button.delete-btn {
 
 button.delete-btn:hover {
     color: var(--danger-color);
+}
+
+/* Expired task styling: make whole row text/buttons orange */
+.task-row.expired .task-label,
+.task-row.expired button {
+    color: var(--expired-color);
 }
