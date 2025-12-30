@@ -20,12 +20,12 @@ class TaskManager:
             return 1
         return max(self.tasks.keys()) + 1
 
-    def add_task(self, title: str, due_date: datetime | None = None) -> Task:
+    def add_task(self, title: str, due_date: datetime | None = None) -> tuple[int, Task]:
         task_id = self._next_id()
         task = Task(title=title, due_date=due_date)
         self.tasks[task_id] = task
         logger.info(f"Added task: {task}")
-        return task
+        return task_id, task
 
     def remove_task(self, task_id: int) -> bool:
         if task_id in self.tasks:
@@ -35,12 +35,12 @@ class TaskManager:
         logger.warning(f"Attempted to remove non-existent task with ID: {task_id}")
         return False
 
-    def toggle_task_completion(self, task_id: int) -> bool:
+    def toggle_task(self, task_id: int) -> bool:
         if task_id in self.tasks:
             task = self.tasks[task_id]
             task.completed = not task.completed
             logger.info(f"Toggled completion for task ID {task_id} to {task.completed}")
-            return True
+            return task.completed
         logger.warning(f"Attempted to toggle non-existent task with ID: {task_id}")
         return False
 

@@ -1,62 +1,39 @@
-/* Tokyo Night Variables */
+/* Tokyo Night Colors */
 :root {
-    --bg-color: rgba(36, 40, 59, 0.85); /* Un poco de opacidad */
-    --input-bg: rgba(26, 27, 38, 0.5);
+    --bg-color: rgba(36, 40, 59, 0.6);
+    --input-bg: rgba(26, 27, 38, 0.6);
     --text-color: #c0caf5;
-    --accent-color: #7aa2f7;  /* Azul */
-    --success-color: #9ece6a; /* Verde */
-    --danger-color: #f7768e;  /* Rojo */
-    --border-dim: rgba(169, 177, 214, 0.1);
-    --border-active: rgba(122, 162, 247, 0.5);
+    --muted-color: #565f89;
+    --accent-color: #7aa2f7;
+    --success-color: #9ece6a;
+    --danger-color: #f7768e;
+    --border-color: rgba(169, 177, 214, 0.1);
 }
 
-/* Reset general */
+/* Ventana Principal */
 window {
     background-color: var(--bg-color);
     color: var(--text-color);
-    font-family: "JetBrainsMono Nerd Font", "FiraCode Nerd Font", monospace;
+    font-family: "JetBrainsMono Nerd Font", monospace;
     font-size: 14px;
 }
 
-/* El contenedor de la lista */
-listbox {
-    background-color: transparent;
-    border-top: 1px solid var(--border-dim);
-    margin-top: 10px;
+/* Contenedor del Input (Arriba) */
+.input-container {
+    padding: 15px;
+    border-bottom: 1px solid var(--border-color);
+    background-color: rgba(26, 27, 38, 0.35);
+    border-radius: 8px;
 }
 
-/* --- FILAS DE TAREAS (Minimal Outlined) --- */
-.task-row {
-    background-color: transparent;
-    border-bottom: 1px solid var(--border-dim);
-    padding: 8px 12px;
-    transition: all 0.2s ease;
-}
-
-.task-row:hover {
-    background-color: rgba(255, 255, 255, 0.03);
-}
-
-.task-label {
-    margin-right: 10px;
-    font-weight: 500;
-}
-
-.task-label.completed {
-    color: #565f89;
-    text-decoration: line-through;
-}
-
-/* --- INPUT TEXT --- */
+/* El input de texto */
 entry {
     background-color: var(--input-bg);
     color: var(--text-color);
-    border: 1px solid var(--border-dim);
-    border-radius: 4px;
-    padding: 8px;
-    margin: 10px 10px 0 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 5px 10px;
     box-shadow: none;
-    transition: border-color 0.2s;
 }
 
 entry:focus {
@@ -64,49 +41,77 @@ entry:focus {
     outline: none;
 }
 
-/* --- BOTONES (Iconos only) --- */
-button {
-    background-color: transparent;
-    border: 1px solid transparent;
-    border-radius: 4px;
-    color: var(--text-color);
-    padding: 4px 8px;
-    margin-left: 4px;
-    box-shadow: none;
-}
-
-button:hover {
-    background-color: rgba(255, 255, 255, 0.05);
-    border-color: var(--border-dim);
-}
-
-/* Botón de Agregar (Principal) */
+/* Botón de Agregar (+) */
 button.suggested-action {
+    background: transparent;
     color: var(--accent-color);
-    border: 1px solid var(--border-dim);
-}
-button.suggested-action:hover {
-    border-color: var(--accent-color);
-    background-color: rgba(122, 162, 247, 0.1);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
 }
 
-/* Botón Check (Customizado como outline) */
-button.check-btn {
-    color: #565f89; /* Gris cuando pendiente */
+button.suggested-action:hover {
+    background: rgba(122, 162, 247, 0.1);
+    border-color: var(--accent-color);
+}
+
+/* --- LISTA DE TAREAS --- */
+.task-list {
+    background-color: transparent;
+    /* Fondo transparente vital */
+}
+
+/* Fila individual */
+.task-row {
+    background-color: transparent;
+    /* Quitar fondo negro por defecto */
+    padding: 8px 15px;
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.2s;
+}
+
+.task-row:hover {
+    background-color: rgba(255, 255, 255, 0.03);
+    /* Hover sutil */
+}
+
+/* Texto de la tarea */
+.task-label {
+    font-weight: 500;
+}
+
+.task-label.completed {
+    color: var(--muted-color);
+    text-decoration: line-through;
+}
+
+/* Botones de acción en la fila */
+button.check-btn,
+button.delete-btn {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0 5px;
     font-size: 16px;
 }
+
+/* Check Button Styles */
+button.check-btn {
+    color: var(--muted-color);
+}
+
 button.check-btn:hover {
     color: var(--success-color);
 }
+
 button.check-btn.checked {
     color: var(--success-color);
 }
 
-/* Botón Borrar */
+/* Delete Button Styles */
 button.delete-btn {
-    color: #565f89;
+    color: var(--muted-color);
 }
+
 button.delete-btn:hover {
     color: var(--danger-color);
-    background-color: rgba(247, 118, 142, 0.1);
 }

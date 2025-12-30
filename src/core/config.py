@@ -7,7 +7,7 @@ class Config(BaseSettings):
     storage_path: str = "tasks.json"
 
     # Logging
-    log_level: str = "DEBUG"
+    log_level: str = "INFO"
     log_file: str | None = None
 
 

@@ -4,144 +4,128 @@ from src.managers.task_manager import manager
 from src.core.logging import get_logger
 
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gtk  # type: ignore # noqa: E402
-
+from gi.repository import Gtk, Gdk  # type: ignore # noqa: E402
 
 logger = get_logger(__name__)
 
 
 class TaskRow(Gtk.ListBoxRow):
-    def __init__(self, task_id: int, task):
+    def __init__(self, task_id, task_data):
         super().__init__()
         self.task_id = task_id
-        # set a name for CSS selection
-        try:
-            self.set_name("task-row")
-        except Exception:
-            pass
+        self.add_css_class("task-row")
 
-        hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        # Layout horizontal
+        hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         self.set_child(hbox)
 
-        title = getattr(task, "title", str(task))
-        self.title_label = Gtk.Label(label=title)
-        try:
-            self.title_label.set_name("title-label")
-        except Exception:
-            pass
-        self.title_label.set_hexpand(True)
-        hbox.append(self.title_label)
+        # 1. Label
+        self.label = Gtk.Label(label=task_data["title"], xalign=0)
+        self.label.add_css_class("task-label")
+        self.label.set_hexpand(True)
 
-        # Controls on the right: completion toggle and remove (X)
-        controls = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        try:
-            controls.set_name("controls")
-        except Exception:
-            pass
+        if task_data["completed"]:
+            self.label.add_css_class("completed")
 
-        completed = bool(getattr(task, "completed", False))
-        # use a small toggle button with an icon-like label (minimal text)
-        self.toggle_btn = Gtk.ToggleButton(label="✔" if completed else " ")
-        try:
-            self.toggle_btn.set_name("toggle-btn")
-        except Exception:
-            pass
-        self.toggle_btn.set_active(completed)
-        self.toggle_btn.connect("toggled", self.on_toggled)
-        controls.append(self.toggle_btn)
+        hbox.append(self.label)
 
-        # Remove button as a small 'X' icon (nerdfont/ASCII compatible)
-        remove_btn = Gtk.Button(label="✕")
-        try:
-            remove_btn.set_name("remove-btn")
-        except Exception:
-            pass
-        remove_btn.connect("clicked", self.on_remove)
-        controls.append(remove_btn)
+        # 2. Controles
+        controls_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
 
-        hbox.append(controls)
+        # Botón Check
+        is_done = task_data["completed"]
+        icon_check = "" if is_done else ""
+        self.check_btn = Gtk.Button(label=icon_check)
+        self.check_btn.add_css_class("check-btn")
+        if is_done:
+            self.check_btn.add_css_class("checked")
+        self.check_btn.set_has_frame(False)
+        self.check_btn.connect("clicked", self.on_toggle)
 
-    def on_toggled(self, widget):
-        try:
-            manager.toggle_task_completion(self.task_id)
-            logger.info("Toggled task %s", self.task_id)
-            # reflect completed state in UI via CSS class
-            try:
-                if widget.get_active():
-                    self.add_css_class("completed")
-                else:
-                    self.remove_css_class("completed")
-            except Exception:
-                pass
-        except Exception as e:
-            logger.exception("Failed toggling task %s: %s", self.task_id, e)
+        # Botón Borrar
+        del_btn = Gtk.Button(label="")
+        del_btn.add_css_class("delete-btn")
+        del_btn.set_has_frame(False)
+        del_btn.connect("clicked", self.on_delete)
 
-    def on_remove(self, widget):
-        try:
-            manager.remove_task(self.task_id)
-            parent = self.get_parent()
-            if parent:
-                parent.remove(self)
-            # save after removal
-            try:
-                manager.save_tasks()
-            except Exception:
-                logger.debug("Failed saving after remove")
-            logger.info("Removed task %s", self.task_id)
-        except Exception as e:
-            logger.exception("Failed removing task %s: %s", self.task_id, e)
+        controls_box.append(self.check_btn)
+        controls_box.append(del_btn)
+        hbox.append(controls_box)
+
+    def on_toggle(self, widget):
+        new_state = manager.toggle_task(self.task_id)
+        if new_state:
+            self.label.add_css_class("completed")
+            self.check_btn.add_css_class("checked")
+            self.check_btn.set_label("")
+        else:
+            self.label.remove_css_class("completed")
+            self.check_btn.remove_css_class("checked")
+            self.check_btn.set_label("")
+
+    def on_delete(self, widget):
+        manager.remove_task(self.task_id)
+        listbox = self.get_parent()
+        listbox.remove(self)
 
 
 class TaskList(Gtk.Box):
     def __init__(self):
-        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=0)
 
-        controls = Gtk.Box(spacing=6)
-        self.append(controls)
+        # --- Header con Input ---
+        input_container = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        input_container.add_css_class("input-container")
 
-        self.entry = Gtk.Entry(placeholder_text="New task title")
-        controls.append(self.entry)
+        self.entry = Gtk.Entry()
+        self.entry.set_placeholder_text("Add new task...")
+        self.entry.set_hexpand(True)
+        self.entry.connect("activate", self.on_add)
 
-        add_btn = Gtk.Button(label="Add")
+        # Botón '+' Minimalista
+        add_btn = Gtk.Button(label="")
+        add_btn.add_css_class("suggested-action")
         add_btn.connect("clicked", self.on_add)
-        controls.append(add_btn)
+
+        input_container.append(self.entry)
+        input_container.append(add_btn)
+        self.append(input_container)
+
+        # --- Lista de Tareas ---
+        # ScrolledWindow permite scroll si hay muchas tareas
+        scrolled = Gtk.ScrolledWindow()
+        scrolled.set_vexpand(True)  # Ocupar resto de altura
 
         self.listbox = Gtk.ListBox()
-        self.append(self.listbox)
+        self.listbox.set_selection_mode(
+            Gtk.SelectionMode.NONE
+        )  # Desactivar selección azul fea
+        self.listbox.add_css_class("task-list")
 
-        self.refresh()
+        scrolled.set_child(self.listbox)
+        self.append(scrolled)
 
-    def refresh(self):
-        # Recreate the ListBox to avoid relying on get_children() API
-        try:
-            self.remove(self.listbox)
-        except Exception:
-            pass
-        self.listbox = Gtk.ListBox()
-        self.append(self.listbox)
+        self.refresh_list()
+
+    def refresh_list(self):
+        child = self.listbox.get_first_child()
+        while child:
+            self.listbox.remove(child)
+            child = self.listbox.get_first_child()
 
         tasks = manager.get_tasks()
-        for task_id in sorted(tasks.keys()):
-            task = tasks[task_id]
-            row = TaskRow(task_id, task)
+        for t_id, t_data in tasks.items():
+            row = TaskRow(t_id, t_data)
             self.listbox.append(row)
 
     def on_add(self, widget):
-        title = (self.entry.get_text() or "").strip()
-        if not title:
-            return
-        try:
-            task = manager.add_task(title)
-            # Add new row to UI
-            new_id = max(manager.get_tasks().keys())
-            row = TaskRow(new_id, task)
+        text = self.entry.get_text().strip()
+        if text:
+            new_id, new_task = manager.add_task(text)
+            row = TaskRow(new_id, new_task.model_dump())
             self.listbox.append(row)
             self.entry.set_text("")
-            # save after adding
-            try:
-                manager.save_tasks()
-            except Exception:
-                logger.debug("Failed saving after add")
-            logger.info("Added task %s", title)
+        try:
+            manager.save_tasks()
         except Exception as e:
-            logger.exception("Failed adding task: %s", e)
+            logger.error(f"Error saving tasks: {e}")
