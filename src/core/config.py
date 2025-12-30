@@ -11,5 +11,4 @@ class Config(BaseSettings):
     log_file: str | None = None
 
 
-
 settings = Config()

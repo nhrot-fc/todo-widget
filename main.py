@@ -3,11 +3,11 @@ from datetime import datetime
 
 from src.core.logging import setup_logging, get_logger
 from src.core.config import settings
+from src.managers.task_manager import manager
+from src.gui.TodoApp import main
+
 
 setup_logging(settings.log_level, settings.log_file)
-
-from src.gui.TodoApp import main
-from src.managers.task_manager import manager
 
 
 logger = get_logger(__name__)

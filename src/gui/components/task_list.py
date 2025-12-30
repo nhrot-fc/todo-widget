@@ -3,9 +3,10 @@ import gi
 from src.managers.task_manager import manager
 from src.core.logging import get_logger
 from src.schemas.task import Task
+from datetime import datetime
 
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gtk, Gdk  # type: ignore # noqa: E402
+from gi.repository import Gtk, Gdk  # type: ignore # noqa: E402, E501
 
 logger = get_logger(__name__)
 
@@ -19,6 +20,7 @@ class TaskRow(Gtk.ListBoxRow):
         # Layout horizontal
         hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         self.set_child(hbox)
+        self.hbox = hbox
 
         # 1. Label
         self.label = Gtk.Label(label=task_data.title, xalign=0)
@@ -32,6 +34,16 @@ class TaskRow(Gtk.ListBoxRow):
 
         # 2. Controles
         controls_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
+        self.controls_box = controls_box
+
+        # Botón Fecha
+        date_label = (
+            task_data.due_date.strftime("%Y-%m-%d") if task_data.due_date else ""
+        )
+        self.date_btn = Gtk.Button(label=date_label)
+        self.date_btn.add_css_class("date-btn")
+        self.date_btn.set_has_frame(False)
+        self.date_btn.connect("clicked", self.on_set_date)
 
         # Botón Check
         is_done = task_data.completed
@@ -50,8 +62,14 @@ class TaskRow(Gtk.ListBoxRow):
         del_btn.connect("clicked", self.on_delete)
 
         controls_box.append(self.check_btn)
+        controls_box.append(self.date_btn)
         controls_box.append(del_btn)
         hbox.append(controls_box)
+
+        # Enable double-click to edit title (in-place)
+        click = Gtk.GestureClick()
+        click.connect("pressed", self.on_label_pressed)
+        self.label.add_controller(click)
 
     def on_toggle(self, widget):
         new_state = manager.toggle_task(self.task_id)
@@ -76,6 +94,91 @@ class TaskRow(Gtk.ListBoxRow):
             manager.save_tasks()
         except Exception as e:
             logger.error(f"Error saving tasks: {e}")
+
+    def on_label_pressed(self, gesture, n_press, x, y):
+        if n_press == 2:
+            self.start_edit()
+
+    def start_edit(self):
+        # Replace label with Entry for in-place edit
+        try:
+            self.hbox.remove(self.label)
+        except Exception:
+            pass
+        self.edit_entry = Gtk.Entry()
+        self.edit_entry.set_text(self.label.get_text())
+        self.edit_entry.set_hexpand(True)
+        self.edit_entry.connect("activate", self.finish_edit)
+        # Use EventControllerFocus to detect leaving the entry (GTK4)
+        try:
+            focus_ctl = Gtk.EventControllerFocus()
+            focus_ctl.connect("leave", lambda ctl: self.finish_edit(self.edit_entry))
+            self.edit_entry.add_controller(focus_ctl)
+        except Exception:
+            pass
+        self.hbox.insert_child_before(self.edit_entry, self.controls_box)
+        self.edit_entry.grab_focus()
+
+    def finish_edit(self, widget, *args):
+        # widget may be Entry or event args; read text from entry
+        try:
+            new_text = self.edit_entry.get_text().strip()
+        except Exception:
+            return
+        if new_text and len(new_text) > 0 and new_text != self.label.get_text():
+            manager.edit_task_title(self.task_id, new_text)
+            try:
+                manager.save_tasks()
+            except Exception as e:
+                logger.error(f"Error saving tasks: {e}")
+        # restore label
+        try:
+            self.hbox.remove(self.edit_entry)
+        except Exception:
+            pass
+        self.label.set_text(new_text or self.label.get_text())
+        self.hbox.insert_child_before(self.label, self.controls_box)
+
+    def on_set_date(self, widget):
+        # Open a simple dialog with Gtk.Calendar to pick a date
+        try:
+            dialog = Gtk.Dialog(title="Select date")
+            dialog.add_buttons(
+                "Cancel", Gtk.ResponseType.CANCEL, "OK", Gtk.ResponseType.OK
+            )
+            # Try to set transient parent (avoid mapping warning)
+            try:
+                parent = self.get_ancestor(Gtk.Window)
+                if parent:
+                    dialog.set_transient_for(parent)
+            except Exception:
+                pass
+
+            content = dialog.get_content_area()
+            cal = Gtk.Calendar()
+            content.append(cal)
+
+            def _on_response(dlg, response_id):
+                if response_id == Gtk.ResponseType.OK:
+                    datetime_obj = cal.get_date()
+                    year, month, day = (
+                        datetime_obj.get_year(),
+                        datetime_obj.get_month(),
+                        datetime_obj.get_day_of_month(),
+                    )
+                    new_due = datetime(year, month, day)
+                    manager.edit_task_due_date(self.task_id, new_due)
+                    try:
+                        manager.save_tasks()
+                    except Exception as e:
+                        logger.error(f"Error saving tasks: {e}")
+                    self.date_btn.set_label(new_due.strftime("%Y-%m-%d"))
+                dlg.destroy()
+
+            dialog.connect("response", _on_response)
+            dialog.present()
+        except Exception as e:
+            logger.exception("Failed to set date: %s", e)
 
 
 class TaskList(Gtk.Box):
