@@ -17,7 +17,8 @@ def print_help():
     help_text = """
     Todo Application Help:
     --help          Show this help message
-    --version       Show application version
+    --app           Show application GUI
+    (no args)      Print task statistics
     """
     print(help_text)
 
