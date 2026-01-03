@@ -7,6 +7,7 @@ from pathlib import Path
 
 from src.core.logging import get_logger
 from src.schemas.task import Task
+from typing import Any
 
 logger = get_logger(__name__)
 
@@ -74,7 +75,7 @@ class TaskManager:
     def get_tasks(self) -> dict[int, Task]:
         return self.tasks
 
-    def get_stats(self) -> dict[str, int]:
+    def get_stats(self) -> dict[str, Any]:
         total = len(self.tasks)
         completed = sum(1 for t in self.tasks.values() if t.completed)
 
@@ -85,11 +86,35 @@ class TaskManager:
             if t.due_date and not t.completed and t.due_date < now
         )
 
+        pending = total - completed
+
+        icons = {
+            "completed": "✔",  # o ""
+            "pending": "",  # o ""
+            "expired": "⚠",  # o ""
+            "todo": "",  # icono general
+        }
+
+        # Clase CSS para el estado del widget (Waybar usará esta clase)
+        if expired > 0:
+            css_class = "todo-expired"
+        elif pending > 0:
+            css_class = "todo-warning"
+        else:
+            css_class = "todo-normal"
+
+        text = f"{icons['todo']} {pending}/{total}"
+        tooltip = f"Total: {total}\\nCompletadas: {completed}\\nPendientes: {pending}\\nVencidas: {expired}"
+
         return {
             "total": total,
             "completed": completed,
-            "pending": total - completed,
+            "pending": pending,
             "expired": expired,
+            "text": text,
+            "tooltip": tooltip,
+            "class": css_class,
+            "icons": icons,
         }
 
     def _auto_save(self):
@@ -131,7 +156,7 @@ class TaskManager:
 
             self.tasks = loaded_tasks
             self._update_next_id_counter()
-            logger.info(f"Loaded {len(self.tasks)} tasks.")
+            logger.debug(f"Loaded {len(self.tasks)} tasks.")
 
         except json.JSONDecodeError:
             logger.error(f"Corrupt JSON file: {self.file_path}. Starting clean.")
