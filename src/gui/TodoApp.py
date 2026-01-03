@@ -18,6 +18,7 @@ class TodoApp:
 
         self.css_provider = None
         self.css_path = Path(__file__).parent / "styles.css"
+        self.window = None
 
     def load_css(self):
         display = Gdk.Display.get_default()
@@ -40,35 +41,31 @@ class TodoApp:
     def on_activate(self, app):
         logger.info("Activating application")
 
+        if self.window:
+            self.window.present()
+            return
+
         if self.css_path.exists():
             self.load_css()
 
-        win = Gtk.ApplicationWindow(application=app)
-        win.set_title(settings.app_name)
-        win.set_default_size(450, 600)
+        self.window = Gtk.ApplicationWindow(application=app)
+        self.window.set_title(settings.app_name)
+        self.window.set_default_size(450, 600)
 
         task_list = TaskList(self.task_manager)
-        win.set_child(task_list)
+        self.window.set_child(task_list)
         controller = Gtk.EventControllerKey()
 
         def _on_key_pressed(controller, keyval, keycode, state):
-            if keyval == Gdk.KEY_Escape:
-                win.close()
+            if keyval == Gdk.KEY_Escape and self.window:
+                self.window.close()
                 return True
             return False
 
         controller.connect("key-pressed", _on_key_pressed)
-        win.add_controller(controller)
+        self.window.add_controller(controller)
 
-        win.present()
+        self.window.present()
 
     def run(self):
-        try:
-            registered = self.app.register(None)
-            if not registered:
-                logger.info("Another instance is already running; exiting.")
-                return
-        except Exception as e:
-            logger.exception(f"Error registering application: {e}")
-
         self.app.run(None)
