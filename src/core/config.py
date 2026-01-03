@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings
 
 class Config(BaseSettings):
     # Application
-    app_name: str = "Todo Widget"
+    app_name: str = "TodoWidget"
     storage_path: str = "tasks.json"
 
     # Logging

@@ -5,7 +5,7 @@ from src.core.logging import get_logger
 from src.gui.components.task_list import TaskList
 
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gtk, Gdk  # type: ignore # noqa: E402
+from gi.repository import Gtk, Gdk, Gio  # type: ignore # noqa: E402
 
 logger = get_logger(__name__)
 
@@ -63,4 +63,12 @@ class TodoApp:
         win.present()
 
     def run(self):
+        try:
+            registered = self.app.register(None)
+            if not registered:
+                logger.info("Another instance is already running; exiting.")
+                return
+        except Exception as e:
+            logger.exception(f"Error registering application: {e}")
+
         self.app.run(None)
