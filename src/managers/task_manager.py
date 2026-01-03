@@ -75,7 +75,7 @@ class TaskManager:
     def get_tasks(self) -> dict[int, Task]:
         return self.tasks
 
-    def get_stats(self) -> dict[str, Any]:
+    def get_stats(self) -> Any:
         total = len(self.tasks)
         completed = sum(1 for t in self.tasks.values() if t.completed)
 
@@ -106,7 +106,7 @@ class TaskManager:
         text = f"{icons['todo']} {pending}/{total}"
         tooltip = f"Total: {total}\\nCompletadas: {completed}\\nPendientes: {pending}\\nVencidas: {expired}"
 
-        return {
+        json_return = {
             "total": total,
             "completed": completed,
             "pending": pending,
@@ -116,6 +116,7 @@ class TaskManager:
             "class": css_class,
             "icons": icons,
         }
+        return json.dumps(json_return)
 
     def _auto_save(self):
         self.save_tasks()
