@@ -55,6 +55,25 @@ button.suggested-action:hover {
     border-color: var(--accent-color);
 }
 
+/* Botón de orden con Nerd Font (ícono) */
+button.nerfont {
+    font-family: "JetBrainsMono Nerd Font", monospace;
+    font-size: 16px;
+    background: transparent;
+    color: var(--accent-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 5px 8px;
+    min-width: 36px;
+    min-height: 32px;
+    box-shadow: none;
+}
+
+button.nerfont:hover {
+    background: rgba(122, 162, 247, 0.08);
+    border-color: var(--accent-color);
+}
+
 /* --- LISTA DE TAREAS --- */
 .task-list {
     background-color: transparent;
@@ -89,6 +108,22 @@ button.suggested-action:hover {
 button.date-btn.completed {
     color: var(--muted-color);
     text-decoration: line-through;
+}
+
+/* Date button: tamaño y centrado similar a otros botones */
+button.date-btn {
+    font-family: "JetBrainsMono Nerd Font", monospace;
+    font-size: 14px;
+    padding: 4px 8px;
+    min-width: 44px;
+    min-height: 28px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+}
+
+button.date-btn:hover {
+    background: rgba(122, 162, 247, 0.04);
+    border-color: var(--border-color);
 }
 
 /* Botones de acción en la fila */
@@ -127,4 +162,17 @@ button.delete-btn:hover {
 .task-row.expired .task-label,
 .task-row.expired button {
     color: var(--expired-color);
+}
+
+/* Estilos para el calendario (modal) y hover en días */
+calendar {
+    background-color: var(--input-bg);
+    color: var(--text-color);
+    border-radius: 6px;
+    padding: 6px;
+}
+
+calendar button:hover {
+    background: rgba(122, 162, 247, 0.06);
+    color: var(--text-color);
 }

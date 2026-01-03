@@ -33,8 +33,14 @@ class TaskList(Gtk.Box):
         add_btn.add_css_class("suggested-action")
         add_btn.connect("clicked", self._on_add_task)
 
+        sort_btn = Gtk.Button(label="")
+        sort_btn.add_css_class("nerfont")
+        sort_btn.set_tooltip_text("Sort tasks")
+        sort_btn.connect("clicked", lambda w: self.sort_tasks())
+
         input_container.append(self.entry)
         input_container.append(add_btn)
+        input_container.append(sort_btn)
         self.append(input_container)
 
         self.store = Gio.ListStore(item_type=TaskObject)
@@ -58,11 +64,22 @@ class TaskList(Gtk.Box):
         self.store.remove_all()
         tasks = self.manager.get_tasks()
 
-        sorted_items = sorted(
-            tasks.items(), key=lambda x: (x[1].completed, x[1].due_date or datetime.max)
+        for tid, tdata in tasks.items():
+            self.store.append(TaskObject(tid, tdata))
+
+    def sort_tasks(self):
+        tasks = self.manager.get_tasks()
+
+        sorted_tasks = sorted(
+            tasks.items(),
+            key=lambda item: (
+                item[1].completed,
+                item[1].due_date if item[1].due_date else datetime.max,
+            ),
         )
 
-        for tid, tdata in sorted_items:
+        self.store.remove_all()
+        for tid, tdata in sorted_tasks:
             self.store.append(TaskObject(tid, tdata))
 
     def _on_add_task(self, widget):
